@@ -4,7 +4,8 @@ import os
 import random
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.stem import PorterStemmer
+from nltk.stem.porter import PorterStemmer
+from nltk.stem.snowball import SnowballStemmer
 import spacy
 import matplotlib.pyplot as plt
 
@@ -158,16 +159,25 @@ def plot_token_num_distribution(datasets, tokenize_fun):
     
 ### Stemming
 
-## NLTK stemming
+## NLTK PorterStemmer stemming
 ## text -> list of stemming results
-def nltk_stem(text):
-    ps = PorterStemmer()
-    return [ps.stem(x) for x in nltk_word_tokenize(text)]
+def nltk_ps_stem(text):
+    stemmer = PorterStemmer()
+    return [temmer.stem(x) for x in nltk_word_tokenize(text)]
     
-## spacy stemming
+## NLTK SnowballStemmer stemming
 ## text -> list of stemming results
-# def spacy_stem(text):
+def nltk_sb_stem(text):
+    stemmer = SnowballStemmer(language='english')
+    return [stemmer.stem(x) for x in nltk_word_tokenize(text)]
     
+## spacy lemmatization
+## text -> list of lemmatized results
+def spacy_lemma(text):
+    doc = nlp(text)
+    return [x.lemma_ for x in doc]
+    
+
     
 ## NLTK stemming
 
