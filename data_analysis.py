@@ -3,6 +3,7 @@ import gzip
 import os
 import random
 import nltk
+import math
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
@@ -194,8 +195,45 @@ def plot_token_distribution(dict_name, freq_dict, range = 10):
     plt.xticks(rotation = 90, fontsize = 8)
     plt.savefig(dict_name + ".png")
     plt.cla()
+
+
+#-----Indicative Words-----#
+
+## compute indicative words by PRE
+## two word bags -> ten indicative words
+def pointwise_relative_entropy(word_list_1, word_list_2):
     
-## NLTK stemming
+    len_1 = len(word_list_1)
+    len_2 = len(word_list_2)
+    
+    word_dict_1 = {}
+    word_dict_2 = {}
+    
+    for key in word_list_1:
+        word_dict_1[key] = word_dict_1.get(key, 0) + 1
+    for key in word_list_2:
+        word_dict_2[key] = word_dict_2.get(key, 0) + 1
+    
+    result_dict_1 = {}
+    result_dict_2 = {}
+    
+    for key, value in word_dict_1.items():
+        if key in word_dict_2:
+            result_dict_1[key] = value/len_1 * math.log((value/len_1)/(value/len_2))
+        else:
+            result_dict_1[key] = math.inf
+    
+    for key, value in word_dict_2.items():
+        if key in word_dict_1:
+            result_dict_2[key] = value/len_2 * math.log((value/len_2)/(value/len_1))
+        else:
+            result_dict_2[key] = math.inf
+            
+    results_1 = sorted(result_dict_1.items(),key = lambda item:item[1], reverse=True)
+    results_2 = sorted(result_dict_2.items(),key = lambda item:item[1], reverse=True)
+    
+    return results_1, results_2
+
 
 if __name__ == '__main__':
     
@@ -275,6 +313,18 @@ if __name__ == '__main__':
         plot_token_distribution(name[:-5] + "_stem", all_tokens, range = 50)
         
     
+    ## Indicative Words
+    token_list = [[], []]
+    index = 0
+    for name, dataset in datasets.items():
+        for data in dataset:
+            token_list[index] += nltk_word_tokenize(data["reviewText"])
+        index += 1
+    
+    dataset_1_indicative_words, dataset_2_indicative_words = pointwise_relative_entropy(token_list[0], token_list[1])
+    print(dataset_1_indicative_words[:10])
+    print(dataset_2_indicative_words[:10])
+
     
     
         
