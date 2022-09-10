@@ -113,6 +113,7 @@ def plot_sent_num_distribution(datasets, tokenize_fun):
     plt.xlabel("length of a review in number of sentences")
     plt.ylabel("number of reviews")
     plt.savefig("sentence_distribution.png")
+    plt.cla()
 
 
 #-----Tokenization and Stemming-----#
@@ -156,6 +157,7 @@ def plot_token_num_distribution(datasets, tokenize_fun):
     plt.xlabel("length of a review in number of tokens")
     plt.ylabel("number of reviews")
     plt.savefig("token_distribution.png")
+    plt.cla()
     
 ### Stemming
 
@@ -163,7 +165,7 @@ def plot_token_num_distribution(datasets, tokenize_fun):
 ## text -> list of stemming results
 def nltk_ps_stem(text):
     stemmer = PorterStemmer()
-    return [temmer.stem(x) for x in nltk_word_tokenize(text)]
+    return [stemmer.stem(x) for x in nltk_word_tokenize(text)]
     
 ## NLTK SnowballStemmer stemming
 ## text -> list of stemming results
@@ -177,7 +179,21 @@ def spacy_lemma(text):
     doc = nlp(text)
     return [x.lemma_ for x in doc]
     
+    
+## plot the token distribution
+## freq dict -> draw the distribution
+def plot_token_distribution(dict_name, freq_dict, range = 10):
+    values = sorted(freq_dict.items(),key = lambda item:item[1], reverse=True)
+    x = []
+    y = []
+    for value in values:
+        x.append(value[0])
+        y.append(value[1])
 
+    plt.bar(x[0:range], y[0:range])
+    plt.xticks(rotation = 90, fontsize = 8)
+    plt.savefig(dict_name + ".png")
+    plt.cla()
     
 ## NLTK stemming
 
@@ -228,6 +244,36 @@ if __name__ == '__main__':
         
     plot_sent_num_distribution(datasets, nltk_sent_tokenize)
     plot_token_num_distribution(datasets, nltk_word_tokenize)
+    
+    ## draw the distribution of token frequency
+    ## before stemming
+    for name, dataset in datasets.items():
+        all_tokens = {}
+        for data in dataset:
+            data_tokens = nltk_word_tokenize(data["reviewText"])
+            for data_token in data_tokens:
+                if data_token in all_tokens:
+                    all_tokens[data_token] += 1
+                else:
+                    all_tokens[data_token] = 1
+        
+        plot_token_distribution(name[:-5], all_tokens, range = 50)
+    
+    ## after stemming
+    for name, dataset in datasets.items():
+        all_tokens = {}
+        for data in dataset:
+            data_tokens = nltk_ps_stem(data["reviewText"])
+            # data_tokens = nltk_sb_stem(data["reviewText"])
+            # data_tokens = spacy_lemma(data["reviewText"])
+            for data_token in data_tokens:
+                if data_token in all_tokens:
+                    all_tokens[data_token] += 1
+                else:
+                    all_tokens[data_token] = 1
+        
+        plot_token_distribution(name[:-5] + "_stem", all_tokens, range = 50)
+        
     
     
     
