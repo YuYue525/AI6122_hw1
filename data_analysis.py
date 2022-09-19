@@ -21,6 +21,8 @@ json_files_dir = "./json_files"
 gz_file_names = os.listdir(gz_files_dir)
 json_file_names = [x[:-3] for x in gz_file_names]
 
+plot_dir = "./plots"
+
 
 #-----Dataset Download and Sampling-----#
 
@@ -113,7 +115,7 @@ def plot_sent_num_distribution(datasets, tokenize_fun):
     plt.title("distribution of sentence number in two datasets")
     plt.xlabel("length of a review in number of sentences")
     plt.ylabel("number of reviews")
-    plt.savefig("sentence_distribution.png")
+    plt.savefig(os.path.join(plot_dir, "sentence_distribution.png"))
     plt.cla()
 
 
@@ -157,7 +159,7 @@ def plot_token_num_distribution(datasets, tokenize_fun):
     plt.title("distribution of token number in two datasets")
     plt.xlabel("length of a review in number of tokens")
     plt.ylabel("number of reviews")
-    plt.savefig("token_distribution.png")
+    plt.savefig(os.path.join(plot_dir, "token_distribution.png"))
     plt.cla()
     
 ### Stemming
@@ -193,7 +195,7 @@ def plot_token_distribution(dict_name, freq_dict, range = 10):
 
     plt.bar(x[0:range], y[0:range])
     plt.xticks(rotation = 90, fontsize = 8)
-    plt.savefig(dict_name + ".png")
+    plt.savefig(os.path.join(plot_dir, dict_name + ".png"))
     plt.cla()
 
 
