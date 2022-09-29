@@ -1,6 +1,5 @@
+package SearchEngine;
 
-package searchengine;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
@@ -8,25 +7,14 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.ByteBuffersDirectory;
+import org.apache.lucene.search.*;
 
 import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 
 import java.io.*;
-import java.util.List;
-import java.util.Set;
-import searchengine.LuceneIndexWriter;
-
+import java.util.Scanner;
 
 
 /**
@@ -40,13 +28,13 @@ public class SearchEngine {
     
     public static void main(String[] args) throws IOException, ParseException {
         
-        LuceneIndexWriter luceneIndexWriter = new LuceneIndexWriter("./index/", "../../json_files/reviews_Musical_Instruments_5.json");
+        LuceneIndexWriter luceneIndexWriter = new LuceneIndexWriter("./index/", "/json_files/reviews_Musical_Instruments_5.json");
         JSONArray jsonArray = luceneIndexWriter.parseJSONFile();
         if (luceneIndexWriter.openIndex()){
             luceneIndexWriter.addDocuments(jsonArray);
         }
         luceneIndexWriter.finish();
-        
+
         
         /*
         // 0. Specify the analyzer for tokenizing text.
@@ -70,14 +58,44 @@ public class SearchEngine {
         
 
         // 2. query
-        String querystr = args.length > 0 ? args[0] : "";
+        Scanner scanner=new Scanner(System.in);
+        String querystr;
 
+        /*
+        if(args.length > 0){
+            querystr=args[0];
+        }
+        else{
+            System.out.println("What do you want to query?");
+            querystr=scanner.nextLine();
+        }
+         */
+
+
+        System.out.println("What fields do you want to query?\n1:name\n2:text");
+        Query q;
+        String f;
+        querystr=scanner.next();
+        if(querystr.equals("1")){
+            f="reviewerName";
+        }else{
+            f="reviewText";
+        }
+        System.out.println("If you want to do fuzzy query, please enter Y");
+        boolean b=scanner.next().equals("Y")?true:false;
+        System.out.println("What do you want to query?");
+        querystr=scanner.next();
+        if(b) {
+            q = new QueryParser(f, luceneIndexWriter.analyzer).parse(querystr+"~0.5");
+        }else{
+            q = new QueryParser(f, luceneIndexWriter.analyzer).parse(querystr);
+        }
         // the "title" arg specifies the default field to use
         // when no field is explicitly specified in the query.
-        Query q = new QueryParser("reviewText", luceneIndexWriter.analyzer).parse(querystr);
+
 
         // 3. search
-        int hitsPerPage = 10;
+        int hitsPerPage = 30;
         IndexReader reader = DirectoryReader.open(luceneIndexWriter.dir);
         IndexSearcher searcher = new IndexSearcher(reader);
         TopDocs docs = searcher.search(q, hitsPerPage);
@@ -88,12 +106,13 @@ public class SearchEngine {
         for(int i=0;i<hits.length;++i) {
             int docId = hits[i].doc;
             Document d = searcher.doc(docId);
-            System.out.println((i + 1) + ". " + d.get("asin") + "\t" + d.get("reviewText"));
+            System.out.println((i + 1) + ". " + d.get("asin") + "\t" + d.get("reviewerName") + "\t" + d.get("reviewText"));
         }
 
         // reader can only be closed when there
         // is no need to access the documents any more.
         reader.close();
+        luceneIndexWriter.dir.close();
     }
 
     private static void addDoc(IndexWriter w, String title, String isbn) throws IOException {

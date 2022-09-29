@@ -1,5 +1,5 @@
+package SearchEngine;
 
-package searchengine;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
@@ -36,7 +36,7 @@ public class LuceneIndexWriter {
         this.jsonFilePath = jsonFilePath;
     }
 
-    public void createIndex(){
+    public void createIndex() throws IOException {
         JSONArray jsonObjects = parseJSONFile();
         openIndex();
         addDocuments(jsonObjects);
@@ -46,16 +46,17 @@ public class LuceneIndexWriter {
     /**
      * Parse a Json file. The file path should be included in the constructor
      */
-    public JSONArray parseJSONFile(){
+    public JSONArray parseJSONFile() throws IOException {
 
         //Get the JSON file, in this case is in ~/resources/test.json
-        InputStream jsonFile =  getClass().getResourceAsStream(jsonFilePath);
+        InputStream jsonFile =  getClass().getResourceAsStream(jsonFilePath); //changed
         Reader readerJson = new InputStreamReader(jsonFile);
 
         //Parse the json file using simple-json library
         Object fileObjects= JSONValue.parse(readerJson);
         JSONArray arrayObjects=(JSONArray)fileObjects;
 
+        jsonFile.close();
         return arrayObjects;
 
     }
@@ -69,6 +70,11 @@ public class LuceneIndexWriter {
 
             //Always overwrite the directory
             iwc.setOpenMode(OpenMode.CREATE);
+            /*
+            if(indexWriter!=null&&indexWriter.isOpen())
+                indexWriter.close();
+
+             */
             indexWriter = new IndexWriter(dir, iwc);
 
             return true;
@@ -92,6 +98,8 @@ public class LuceneIndexWriter {
                 if(field.equals("reviewText")){
                     doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
                     //System.out.println(new TextField(field, (String)object.get(field), Field.Store.YES));              
+                }else if(field.equals("reviewerName")){
+                    doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
                 }else if(field.equals("reviewID")){
                     doc.add(new StringField(field, (String)object.get(field), Field.Store.YES));
                     doc.add(new SortedDocValuesField(field, new BytesRef((String)object.get(field))));
