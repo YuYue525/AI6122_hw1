@@ -100,6 +100,10 @@ public class LuceneIndexWriter {
                     //System.out.println(new TextField(field, (String)object.get(field), Field.Store.YES));              
                 }else if(field.equals("reviewerName")){
                     doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
+                }else if(field.equals("helpful")){
+                    doc.add(new TextField(field, ((JSONArray) object.get(field)).get(0) +"/"+ ((JSONArray) object.get(field)).get(1), Field.Store.YES));
+                }else if(field.equals("reviewTime")){
+                    doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
                 }else if(field.equals("reviewID")){
                     doc.add(new StringField(field, (String)object.get(field), Field.Store.YES));
                     doc.add(new SortedDocValuesField(field, new BytesRef((String)object.get(field))));

@@ -15,6 +15,7 @@ import org.json.simple.JSONArray;
 
 import java.io.*;
 import java.util.Scanner;
+import java.util.regex.Pattern;
 
 
 /**
@@ -72,19 +73,19 @@ public class SearchEngine {
          */
 
 
-        System.out.println("What fields do you want to query?\n1:name\n2:text");
+        System.out.println("If you want to query by name, please input 1.\r\nOtherwise, It will be searched by review text.");
         Query q;
         String f;
-        querystr=scanner.next();
+        querystr=scanner.nextLine();
         if(querystr.equals("1")){
             f="reviewerName";
         }else{
             f="reviewText";
         }
-        System.out.println("If you want to do fuzzy query, please enter Y");
-        boolean b=scanner.next().equals("Y")?true:false;
+        System.out.println("If you want to do fuzzy query, please input 1");
+        boolean b= scanner.nextLine().equals("1");
         System.out.println("What do you want to query?");
-        querystr=scanner.next();
+        querystr=scanner.nextLine();
         if(b) {
             q = new QueryParser(f, luceneIndexWriter.analyzer).parse(querystr+"~0.5");
         }else{
@@ -95,19 +96,60 @@ public class SearchEngine {
 
 
         // 3. search
-        int hitsPerPage = 30;
+        long startTime=System.currentTimeMillis();
+        int hitsPerPage = 100;
         IndexReader reader = DirectoryReader.open(luceneIndexWriter.dir);
         IndexSearcher searcher = new IndexSearcher(reader);
         TopDocs docs = searcher.search(q, hitsPerPage);
         ScoreDoc[] hits = docs.scoreDocs;
+        long endTime=System.currentTimeMillis();
 
         // 4. display results
         System.out.println("Found " + hits.length + " hits.");
-        for(int i=0;i<hits.length;++i) {
-            int docId = hits[i].doc;
-            Document d = searcher.doc(docId);
-            System.out.println((i + 1) + ". " + d.get("asin") + "\t" + d.get("reviewerName") + "\t" + d.get("reviewText"));
+        System.out.println("Use time： "+(endTime-startTime)+"ms");
+        System.out.println("For show, Long review texts will be truncated to one hundred characters");
+        int showPage=0;
+        do{
+            System.out.print(("NO") + ". " + "   ID     " + "\t" +("overall")+ "\t"+("helpful")+ "\t"+("reviewTime")+"\t");
+            System.out.printf("%-40s\t","Name");
+            System.out.println("Text");
+            for(int i=showPage;i<Math.min(hits.length,10+showPage);++i) {
+                int docId = hits[i].doc;
+                Document d = searcher.doc(docId);
+                System.out.print((i + 1) + ". " + d.get("asin") + "\t"+d.get("overall")+ "\t\t"+d.get("helpful")+ "\t\t"+d.get("reviewTime")+"\t" );
+                System.out.printf("%-40s\t",d.get("reviewerName"));
+                int len=d.get("reviewText").length();
+                System.out.printf("%-100s\t\r\n",d.get("reviewText").substring(0,Math.min(100,len)));
+            }
+
+            if(hits.length>showPage+10) {
+                System.out.println("There are still " + (hits.length - showPage - 10 ) + " results to show.\r\nIf you want to see more, please push Enter." +
+                        "\r\nIf you want to quit, please input q.");
+                if(scanner.nextLine().equals("q")){
+                    break;
+                }
+                else{
+                    showPage= Math.min(hits.length, showPage + 10);
+                }
+            }
+        }while(showPage<hits.length);
+
+        while(true) {
+            System.out.println("If you want to see detail of any review, please input the right NO.\r\n" +
+                    "If you want to quit, please push Enter.");
+            String num=scanner.nextLine();
+            if (isNumeric(num)) {
+                int i=Integer.parseInt(num);
+                if(i> hits.length){
+                    System.out.println("Your input NO is too big. Please check again.");
+                }else{
+                    int docId = hits[i-1].doc;
+                    Document d = searcher.doc(docId);
+                    System.out.println("Name:\t"+d.get("reviewerName")+"\r\nText:\r\n"+d.get("reviewText"));
+                }
+            }else break;
         }
+        System.out.println("Search end. Thanks for using.");
 
         // reader can only be closed when there
         // is no need to access the documents any more.
@@ -123,6 +165,11 @@ public class SearchEngine {
         // use a string field for isbn because we don't want it tokenized
         doc.add(new StringField("isbn", isbn, Field.Store.YES));
         w.addDocument(doc);
+    }
+
+    public static boolean isNumeric(String str){
+        Pattern pattern = Pattern.compile("[1-9][0-9]+");
+        return pattern.matcher(str).matches();
     }
     
     
