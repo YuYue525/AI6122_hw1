@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 public class SearchEngine {
     
     public static boolean isNumeric(String str){
-        Pattern pattern = Pattern.compile("[0-9]+");
+        Pattern pattern = Pattern.compile("[1-9][0-9]*");
         return pattern.matcher(str).matches();
     }
     
