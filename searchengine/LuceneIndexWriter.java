@@ -72,6 +72,7 @@ public class LuceneIndexWriter {
             File f=new File(indexPath);
             dir = FSDirectory.open(f.toPath());
             analyzer = new StandardAnalyzer();
+            //analyzer = new EnglishAnalyzer();
             //analyzer = new StandardAnalyzer(EnglishAnalyzer.getDefaultStopSet());
             IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
