@@ -1,7 +1,9 @@
-package SearchEngine;
 
+package searchengine;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -13,8 +15,9 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
 import java.io.*;
-import java.util.List;
+import java.util.*;
 import java.util.Set;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.util.BytesRef;
 
 /**
@@ -23,41 +26,44 @@ import org.apache.lucene.util.BytesRef;
  */
 public class LuceneIndexWriter {
     
-    String indexPath = "./index";
+    String indexPath = null;
 
-    String jsonFilePath = "./json_files/reviews_Musical_Instruments_5.json";
+    String[] jsonFilePaths = null;
 
     IndexWriter indexWriter = null;
     Directory dir = null;
     Analyzer analyzer = null;
 
-    public LuceneIndexWriter(String indexPath, String jsonFilePath) {
+    public LuceneIndexWriter(String indexPath, String[] jsonFilePaths) {
         this.indexPath = indexPath;
-        this.jsonFilePath = jsonFilePath;
+        this.jsonFilePaths = jsonFilePaths;
     }
 
-    public void createIndex() throws IOException {
-        JSONArray jsonObjects = parseJSONFile();
+    public void createIndex(){
+        ArrayList<JSONArray> jsonObjects = parseJSONFile();
         openIndex();
-        addDocuments(jsonObjects);
+        for (JSONArray jsonObject : jsonObjects){
+            addDocuments(jsonObject);
+        }
         finish();
     }
 
     /**
      * Parse a Json file. The file path should be included in the constructor
      */
-    public JSONArray parseJSONFile() throws IOException {
-
+    public ArrayList<JSONArray> parseJSONFile(){
+        ArrayList<JSONArray> results = new ArrayList<JSONArray>();
         //Get the JSON file, in this case is in ~/resources/test.json
-        InputStream jsonFile =  getClass().getResourceAsStream(jsonFilePath); //changed
-        Reader readerJson = new InputStreamReader(jsonFile);
+        for(String jsonFilePath : jsonFilePaths){
+            InputStream jsonFile =  getClass().getResourceAsStream(jsonFilePath);
+            Reader readerJson = new InputStreamReader(jsonFile);
 
-        //Parse the json file using simple-json library
-        Object fileObjects= JSONValue.parse(readerJson);
-        JSONArray arrayObjects=(JSONArray)fileObjects;
-
-        jsonFile.close();
-        return arrayObjects;
+            //Parse the json file using simple-json library
+            Object fileObjects= JSONValue.parse(readerJson);
+            JSONArray arrayObjects=(JSONArray)fileObjects;
+            results.add(arrayObjects); 
+        }
+        return results;
 
     }
 
@@ -66,15 +72,11 @@ public class LuceneIndexWriter {
             File f=new File(indexPath);
             dir = FSDirectory.open(f.toPath());
             analyzer = new StandardAnalyzer();
+            //analyzer = new StandardAnalyzer(EnglishAnalyzer.getDefaultStopSet());
             IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
 
             //Always overwrite the directory
             iwc.setOpenMode(OpenMode.CREATE);
-            /*
-            if(indexWriter!=null&&indexWriter.isOpen())
-                indexWriter.close();
-
-             */
             indexWriter = new IndexWriter(dir, iwc);
 
             return true;
@@ -90,6 +92,7 @@ public class LuceneIndexWriter {
      * Add documents to the index
      */
     public void addDocuments(JSONArray jsonObjects){
+        long startTime=System.currentTimeMillis();
         for(JSONObject object : (List<JSONObject>) jsonObjects){
             Document doc = new Document();
             for(String field : (Set<String>) object.keySet()){
@@ -97,24 +100,29 @@ public class LuceneIndexWriter {
                 //System.out.println(field);
                 if(field.equals("reviewText")){
                     doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
-                    //System.out.println(new TextField(field, (String)object.get(field), Field.Store.YES));              
+                    //System.out.println(new TextField(field, (String)object.get(field), Field.Store.YES));
+                    
                 }else if(field.equals("reviewerName")){
                     doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
+                    
                 }else if(field.equals("helpful")){
                     doc.add(new TextField(field, ((JSONArray) object.get(field)).get(0) +"/"+ ((JSONArray) object.get(field)).get(1), Field.Store.YES));
+                
                 }else if(field.equals("reviewTime")){
                     doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
-                }else if(field.equals("reviewID")){
-                    doc.add(new StringField(field, (String)object.get(field), Field.Store.YES));
-                    doc.add(new SortedDocValuesField(field, new BytesRef((String)object.get(field))));
+                    
+                }else if(field.equals("reviewerID")){
+                    doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
+
                 }else if(field.equals("asin")){
-                    doc.add(new StringField(field, (String)object.get(field), Field.Store.YES));
-                    doc.add(new SortedDocValuesField(field, new BytesRef((String)object.get(field))));
+                    doc.add(new TextField(field, (String)object.get(field), Field.Store.YES));
+                    
                 }else if(field.equals("overall")){
                     //System.out.println(object.get(field));
                     doc.add(new DoublePoint(field, (double)object.get(field)));
                     //doc.add(new NumericDocValuesField(field, (double)object.get(field)));
                     doc.add(new StoredField(field, (double)object.get(field)));
+                    
                 }
                 
             }
@@ -124,6 +132,9 @@ public class LuceneIndexWriter {
                 System.err.println("Error adding documents to the index. " +  ex.getMessage());
             }
         }
+        long endTime=System.currentTimeMillis();
+        
+        System.out.println("Indexing Time: " + (endTime-startTime) + " ms");
     }
 
     /**
@@ -136,6 +147,16 @@ public class LuceneIndexWriter {
         } catch (IOException ex) {
             System.err.println("We had a problem closing the index: " + ex.getMessage());
         }
+    }
+    
+    public static void main(String[] args) throws IOException, ParseException {
+        String indexPath = "./index/";
+        String[] jsonFilePaths = { 
+            "../../json_files/reviews_Musical_Instruments_5.json", 
+            "../../json_files/reviews_Patio_Lawn_and_Garden_5.json"
+        };
+        LuceneIndexWriter luceneIndexWriter = new LuceneIndexWriter(indexPath, jsonFilePaths);
+        luceneIndexWriter.createIndex();
     }
     
 }

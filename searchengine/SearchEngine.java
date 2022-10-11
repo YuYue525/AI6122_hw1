@@ -1,5 +1,6 @@
-package SearchEngine;
 
+package searchengine;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
@@ -7,14 +8,29 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.ByteBuffersDirectory;
+
+
 
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 
 import java.io.*;
-import java.util.Scanner;
+import java.util.*;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.document.*;
+import org.apache.lucene.store.FSDirectory;
+import searchengine.LuceneIndexWriter;
 import java.util.regex.Pattern;
 
 
@@ -26,135 +42,97 @@ import java.util.regex.Pattern;
 
 public class SearchEngine {
     
+    public static boolean isNumeric(String str){
+        Pattern pattern = Pattern.compile("[0-9]+");
+        return pattern.matcher(str).matches();
+    }
     
     public static void main(String[] args) throws IOException, ParseException {
         
-        LuceneIndexWriter luceneIndexWriter = new LuceneIndexWriter("./index/", "/json_files/reviews_Musical_Instruments_5.json");
-        JSONArray jsonArray = luceneIndexWriter.parseJSONFile();
-        if (luceneIndexWriter.openIndex()){
-            luceneIndexWriter.addDocuments(jsonArray);
-        }
-        luceneIndexWriter.finish();
-
+        String indexPath = "./index";
+        File f=new File(indexPath);
+        Directory dir = FSDirectory.open(f.toPath());
         
-        /*
-        // 0. Specify the analyzer for tokenizing text.
-        //    The same analyzer should be used for indexing and searching
-        StandardAnalyzer analyzer = new StandardAnalyzer();
+        //whether there are stopwords for the query
+        Analyzer analyzer = new StandardAnalyzer(EnglishAnalyzer.getDefaultStopSet());
+        //Analyzer analyzer = new StandardAnalyzer();
 
-        
-        // 1. create the index
-        Directory index = new ByteBuffersDirectory();
-       
-
-        IndexWriterConfig config = new IndexWriterConfig(analyzer);
-
-        IndexWriter w = new IndexWriter(index, config);
-        addDoc(w, "Lucene in Action", "193398817");
-        addDoc(w, "Lucene for Dummies", "55320055Z");
-        addDoc(w, "Managing Gigabytes", "55063554A");
-        addDoc(w, "The Art of Computer Science", "9900333X");
-        w.close();
-        */
-        
-
-        // 2. query
+        //query
         Scanner scanner=new Scanner(System.in);
-        String querystr;
-
-        /*
-        if(args.length > 0){
-            querystr=args[0];
-        }
-        else{
-            System.out.println("What do you want to query?");
-            querystr=scanner.nextLine();
-        }
-         */
-
-
-        System.out.println("If you want to query by name, please input 1.\r\nOtherwise, It will be searched by review text.");
+        String querystr = args.length > 0 ? args[0] : "Orb-3 Spa Enzymes non-toxic product an Endless Pool";
+        
         Query q;
-        String f;
-        querystr=scanner.nextLine();
-        if(querystr.equals("1")){
-            f="reviewerName";
-        }else{
-            f="reviewText";
-        }
-        System.out.println("If you want to do fuzzy query, please input 1");
-        boolean b= scanner.nextLine().equals("1");
-        System.out.println("What do you want to query?");
-        querystr=scanner.nextLine();
-        if(b) {
-            q = new QueryParser(f, luceneIndexWriter.analyzer).parse(querystr+"~0.5");
-        }else{
-            q = new QueryParser(f, luceneIndexWriter.analyzer).parse(querystr);
-        }
-        // the "title" arg specifies the default field to use
-        // when no field is explicitly specified in the query.
+        //q = DoublePoint.newExactQuery("overall", 5.0);
+        //q = DoublePoint.newRangeQuery("overall", 4.1, 5.0);
+        q = new QueryParser("reviewText", analyzer).parse(querystr);
 
-
-        // 3. search
+        //search
         long startTime=System.currentTimeMillis();
-        int hitsPerPage = 100;
-        IndexReader reader = DirectoryReader.open(luceneIndexWriter.dir);
+        int totalhits = 1000000;
+        IndexReader reader = DirectoryReader.open(dir);
         IndexSearcher searcher = new IndexSearcher(reader);
-        TopDocs docs = searcher.search(q, hitsPerPage);
+        TopDocs docs = searcher.search(q, totalhits);
         ScoreDoc[] hits = docs.scoreDocs;
         long endTime=System.currentTimeMillis();
 
-        // 4. display results
+        //display results
+        
+        System.out.println("For show, Long review texts are truncated to one hundred characters.\n");
+
+        
         System.out.println("Found " + hits.length + " hits.");
-        System.out.println("Use time： "+(endTime-startTime)+"ms");
-        System.out.println("For show, Long review texts will be truncated to one hundred characters");
-        int showPage=0;
+        System.out.println("Use time： "+(endTime-startTime)+"ms. \n");        
+        
+        int displayNum = 10;
+        int showPage = 0;
+        
         do{
-            System.out.print(("NO") + ". " + "   ID     " + "\t" +("overall")+ "\t"+("helpful")+ "\t"+("reviewTime")+"\t");
-            System.out.printf("%-40s\t","Name");
-            System.out.println("Text");
-            for(int i=showPage;i<Math.min(hits.length,10+showPage);++i) {
+            System.out.print("NO. \t reviewerID \t reviewName \t\t asin \t\t reviewText \t \t \t \t \t overall \t reviewTime \t score \t\t docID \n");
+            
+            for(int i = showPage;i < Math.min(hits.length, showPage + displayNum); i++) {
                 int docId = hits[i].doc;
                 Document d = searcher.doc(docId);
-                System.out.print((i + 1) + ". " + d.get("asin") + "\t"+d.get("overall")+ "\t\t"+d.get("helpful")+ "\t\t"+d.get("reviewTime")+"\t" );
-                System.out.printf("%-40s\t",d.get("reviewerName"));
-                int len=d.get("reviewText").length();
-                System.out.printf("%-100s\t\r\n",d.get("reviewText").substring(0,Math.min(100,len)));
+                System.out.print((i + 1) + ". \t" + d.get("reviewerID") + "\t" + d.get("reviewerName").substring(0, Math.min(15, d.get("reviewerName").length())) +
+                        "\t\t"+ d.get("asin")+"\t" +d.get("reviewText").substring(0,Math.min(45,d.get("reviewText").length())) + "\t"+
+                        d.get("overall") +"\t\t"+ d.get("reviewTime") + "\t"+ hits[i].score+"\t"+hits[i].doc+"\n");
+
             }
 
-            if(hits.length>showPage+10) {
-                System.out.println("There are still " + (hits.length - showPage - 10 ) + " results to show.\r\nIf you want to see more, please push Enter." +
+            if(hits.length > showPage + displayNum) {
+                System.out.println("\nThere are still " + (hits.length - (showPage + displayNum) ) + " results to show.\r\nIf you want to see more, please click anything + Enter." +
                         "\r\nIf you want to quit, please input q.");
-                if(scanner.nextLine().equals("q")){
+                String input = scanner.nextLine();
+                if(input.equals("q"))
                     break;
-                }
-                else{
-                    showPage= Math.min(hits.length, showPage + 10);
-                }
+                else
+                    showPage= Math.min(hits.length, showPage + displayNum);
             }
-        }while(showPage<hits.length);
-
+            else
+                break;
+            
+        }while(showPage < hits.length);
+        
         while(true) {
-            System.out.println("If you want to see detail of any review, please input the right NO.\r\n" +
-                    "If you want to quit, please push Enter.");
+            System.out.println("\nIf you want to see detail of any review, please input the right NO.\nIf you want to quit, please click anything + Enter.");
             String num=scanner.nextLine();
-            if (isNumeric(num)) {
+            if (isNumeric(num) && Integer.parseInt(num) > 0) {
                 int i=Integer.parseInt(num);
                 if(i> hits.length){
                     System.out.println("Your input NO is too big. Please check again.");
                 }else{
                     int docId = hits[i-1].doc;
                     Document d = searcher.doc(docId);
-                    System.out.println("Name:\t"+d.get("reviewerName")+"\r\nText:\r\n"+d.get("reviewText"));
+                    System.out.println("\nName:\t"+d.get("reviewerName")+"\r\nText:\r\n"+d.get("reviewText"));
                 }
-            }else break;
+            }else {
+                break;
+            }
+
         }
         System.out.println("Search end. Thanks for using.");
 
-        // reader can only be closed when there
-        // is no need to access the documents any more.
+
         reader.close();
-        luceneIndexWriter.dir.close();
     }
 
     private static void addDoc(IndexWriter w, String title, String isbn) throws IOException {
@@ -166,11 +144,7 @@ public class SearchEngine {
         doc.add(new StringField("isbn", isbn, Field.Store.YES));
         w.addDocument(doc);
     }
-
-    public static boolean isNumeric(String str){
-        Pattern pattern = Pattern.compile("[1-9][0-9]+");
-        return pattern.matcher(str).matches();
-    }
+    
     
     
 }
