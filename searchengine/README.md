@@ -2,11 +2,12 @@
 
 ## Achieved:
 
-* index the dataset
-** case folding (StandardAnalyzer())
-** case folding + stopwords (StandardAnalyzer(EnglishAnalyzer.getDefaultStopSet()))
-** case folding + stopwords + stemming (EnglishAnalyzer())
+### index the dataset
+* case folding (StandardAnalyzer())
+* case folding + stopwords (StandardAnalyzer(EnglishAnalyzer.getDefaultStopSet()))
+* case folding + stopwords + stemming (EnglishAnalyzer())
 
+### Search Engine
 * term query on [asin/reviewText/reviewerName/reviewerID/summary].
 * phrase query on [reviewText/reviewerName/summary].
 * range search on [overall].
