@@ -1,25 +1,25 @@
 # Simple Search Engine
 
-## Achieved
+## Achieved:
 
 * index the dataset
-* search by name or text
-* free text keyword queries (including single keyword query and phrase query)
-* fuzzy search
-* show results with NO, ID, overall, helpful, reviewTime, name and text.
+** case folding (StandardAnalyzer())
+** case folding + stopwords (StandardAnalyzer(EnglishAnalyzer.getDefaultStopSet()))
+** case folding + stopwords + stemming (EnglishAnalyzer())
 
+* term query on [asin/reviewText/reviewerName/reviewerID/summary].
+* phrase query on [reviewText/reviewerName/summary].
+* range search on [overall].
+* other high-level query on [reviewText/reviewerName/summary].
+* multiple field searching.
 
+## Need to consider in the report:
 
-
-
-## Need to complete
-
-* search for reviews that are specific to a product defined by asin or product id
-
-
-
-## Need to consider
-
-* set search range by helpful, overall or reviewTime
-* Top N (the number of N is configurable) results should be returned via the console2 along with rank, scores, docID, and snippets whenever possible
+* inndexing time
 * Search time
+
+## Java compile and run:
+
+* javac -d . -classpath "./lib/*" ./src/LuceneIndexWriter.java ./src/SearchEngine.java
+* java -classpath "./:./lib/*" searchengine.LuceneIndexWriter
+* java -classpath "./:./lib/*" searchengine.SearchEngine
