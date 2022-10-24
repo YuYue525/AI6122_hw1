@@ -52,6 +52,10 @@ def read_json(in_path):
         reviews = json.load(f)
     return reviews
     
+def dump_json(reviews, out_path):
+    with open(out_path, 'w') as f:
+        json.dump(reviews, f)
+    
 ## reviews list -> list with 200 product asins
 ## randomly select 200 products from the review data
 def random_select_products(reviews_list):
@@ -105,6 +109,7 @@ def plot_sent_num_distribution(datasets, tokenize_fun):
             sent_num_tmp.append(count_sent(data['reviewText'], tokenize_fun))
         
         sent_num.append(sent_num_tmp)
+        # print(name)
         
     max_num = max(sent_num[0] + sent_num[1])
         
@@ -149,6 +154,7 @@ def plot_token_num_distribution(datasets, tokenize_fun):
             token_num_tmp.append(count_token(data['reviewText'], tokenize_fun))
         
         token_num.append(token_num_tmp)
+        # print(name)
         
     max_num = max(token_num[0] + token_num[1])
         
@@ -192,9 +198,10 @@ def plot_token_distribution(dict_name, freq_dict, range = 10):
     for value in values:
         x.append(value[0])
         y.append(value[1])
-
+        
     plt.bar(x[0:range], y[0:range])
     plt.xticks(rotation = 90, fontsize = 8)
+    
     plt.savefig(os.path.join(plot_dir, dict_name + ".png"))
     plt.cla()
 
@@ -223,13 +230,13 @@ def pointwise_relative_entropy(word_list_1, word_list_2):
         if key in word_dict_2:
             result_dict_1[key] = value/len_1 * math.log((value/len_1)/(value/len_2))
         else:
-            result_dict_1[key] = math.inf
+            result_dict_1[key] = value/len_1 * math.log((value/len_1)/(1e-50))
     
     for key, value in word_dict_2.items():
         if key in word_dict_1:
             result_dict_2[key] = value/len_2 * math.log((value/len_2)/(value/len_1))
         else:
-            result_dict_2[key] = math.inf
+            result_dict_2[key] = value/len_2 * math.log((value/len_2)/(1e-50))
             
     results_1 = sorted(result_dict_1.items(),key = lambda item:item[1], reverse=True)
     results_2 = sorted(result_dict_2.items(),key = lambda item:item[1], reverse=True)
@@ -258,6 +265,14 @@ if __name__ == '__main__':
         sampled_reviews = [ x for x in reviews if x["asin"] in sampled_products_asin]
         ## add to datasets dict
         datasets[json_file_names[i]] = sampled_reviews
+        
+    print(json_file_names[0], len(datasets[json_file_names[0]]))
+    print(json_file_names[1], len(datasets[json_file_names[1]]))
+    
+    '''
+    for name, reviews in datasets.items():
+        dump_json(reviews, os.path.join(json_files_dir, name[:-5]+"_new.json"))
+    '''
     
     ## pos tagging
     # test_sentence = "The quick brown fox jumps over the lazy dog"
@@ -267,6 +282,7 @@ if __name__ == '__main__':
     ## randomly select five sentences from two datasets
     
     ## create a list storing all sentences from two sampled datasets
+    
     all_sentences = []
     for name, dataset in datasets.items():
         sampled_dataset = random.sample(dataset, 5)
@@ -287,6 +303,8 @@ if __name__ == '__main__':
     
     ## draw the distribution of token frequency
     ## before stemming
+    token_num_before = {}
+    
     for name, dataset in datasets.items():
         all_tokens = {}
         for data in dataset:
@@ -297,9 +315,12 @@ if __name__ == '__main__':
                 else:
                     all_tokens[data_token] = 1
         
-        plot_token_distribution(name[:-5], all_tokens, range = 50)
+        plot_token_distribution(name[:-5]+"_range_50", all_tokens, range = 50)
+        token_num_before[name] = len(all_tokens)
     
     ## after stemming
+    token_num_after = {}
+    
     for name, dataset in datasets.items():
         all_tokens = {}
         for data in dataset:
@@ -312,8 +333,11 @@ if __name__ == '__main__':
                 else:
                     all_tokens[data_token] = 1
         
-        plot_token_distribution(name[:-5] + "_stem", all_tokens, range = 50)
+        plot_token_distribution(name[:-5] + "_stem_range_50", all_tokens, range = 50)
+        token_num_after[name] = len(all_tokens)
         
+    print(token_num_before)
+    print(token_num_after)
     
     ## Indicative Words
     token_list = [[], []]
