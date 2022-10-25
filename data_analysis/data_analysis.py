@@ -15,8 +15,8 @@ nlp = spacy.load("en_core_web_sm")
 
 ## downloaded .json.gz files are in gz_files_dir
 ## transform .json.gz to .json and save in json_files_dir
-gz_files_dir = "./gz_files"
-json_files_dir = "./json_files"
+gz_files_dir = "../gz_files"
+json_files_dir = "../json_files"
 
 gz_file_names = os.listdir(gz_files_dir)
 json_file_names = [x[:-3] for x in gz_file_names]
@@ -247,6 +247,9 @@ def pointwise_relative_entropy(word_list_1, word_list_2):
 if __name__ == '__main__':
     
     datasets = {}
+    
+    if not os.path.exists(plot_dir):
+        os.makedirs(plot_dir)
     
     ## for each file in the download .json.gz files
     for i in range(len(gz_file_names)):
