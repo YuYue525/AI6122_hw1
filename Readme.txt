@@ -5,7 +5,7 @@ Json-simle package: https://github.com/fangyidong/json-simple
 
 ==========File Directory==========
 
-AI6122_hw1
+SourceCode
 ├── Applications
 │   ├── Music\ instrumentsReview\ sentiment\ pie\ chart.png
 │   ├── Music\ instrumentsneg_wordcloud00.png
